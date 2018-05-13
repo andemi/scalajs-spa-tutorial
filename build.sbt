@@ -4,7 +4,7 @@ import sbt.Project.projectToRef
 // a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
-    scalaVersion := Settings.versions.scala,
+    scalaVersion := Settings.Versions.scala,
     libraryDependencies ++= Settings.sharedDependencies.value
   )
   // set up settings specific to the JS project
@@ -22,7 +22,7 @@ lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
     version := Settings.version,
-    scalaVersion := Settings.versions.scala,
+    scalaVersion := Settings.Versions.scala,
     scalacOptions ++= Settings.scalacOptions,
     libraryDependencies ++= Settings.scalajsDependencies.value,
     // by default we do development build, no eliding
@@ -30,7 +30,8 @@ lazy val client: Project = (project in file("client"))
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // RuntimeDOM is needed for tests
-    jsDependencies += RuntimeDOM % "test",
+//    jsDependencies += RuntimeDOM % "test",
+    jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app
@@ -50,9 +51,10 @@ lazy val server = (project in file("server"))
   .settings(
     name := "server",
     version := Settings.version,
-    scalaVersion := Settings.versions.scala,
+    scalaVersion := Settings.Versions.scala,
     scalacOptions ++= Settings.scalacOptions,
     libraryDependencies ++= Settings.jvmDependencies.value,
+    libraryDependencies += guice,
     commands += ReleaseCmd,
     // triggers scalaJSPipeline when using compile or continuous compilation
     compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
@@ -83,4 +85,6 @@ lazy val ReleaseCmd = Command.command("release") {
 // lazy val root = (project in file(".")).aggregate(client, server)
 
 // loads the Play server project at sbt startup
-onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
+onLoad in Global ~= (_ andThen ("project server" :: _))
+
+fork in run := true
